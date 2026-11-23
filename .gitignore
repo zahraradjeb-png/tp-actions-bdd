@@ -2,4 +2,8 @@ node_modules/
 vendor/
 target/
 __pycache__/
+.pytest_cache/node_modules/
+vendor/
+target/
 .pytest_cache/
+__pycache__/

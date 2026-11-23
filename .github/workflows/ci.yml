@@ -5,6 +5,9 @@ on: [push, pull_request]
 jobs:
   python:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v4
@@ -15,7 +18,7 @@ jobs:
       - name: Installer Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
 
       - name: Installer les dépendances
         run: pip install -r requirements.txt
@@ -37,9 +40,7 @@ jobs:
       - name: Installer Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: node-app/package-lock.json
+          node-version: 20
 
       - name: Installer les dépendances
         run: npm ci
@@ -63,10 +64,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: maven
 
-      - name: Lancer les tests
-        run: mvn -B test
+      - name: Compiler et tester
+        run: mvn -B package
         working-directory: java-app
 
   php:
@@ -82,13 +82,32 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: pdo_pgsql
-          tools: composer
+          extensions: pdo, pdo_pgsql
 
       - name: Installer les dépendances
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction
         working-directory: php-app
 
       - name: Lancer les tests
         run: vendor/bin/phpunit tests
         working-directory: php-app
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [python, node, java, php]
+    steps:
+      - name: Construire
+        run: echo "Build OK : tous les tests ont réussi"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Déploiement
+        run: echo "Déploiement en cours"
+
+      - name: Vérifier le secret
+        env:
+          TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: test -n "$TOKEN" && echo "Token présent"
